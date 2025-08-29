@@ -171,31 +171,31 @@ if command -v zsh &> /dev/null; then
             if command -v chsh &> /dev/null; then
                 ZSH_PATH=$(which zsh)
                 # Check if zsh is in /etc/shells
-                if grep -q "^$ZSH_PATH$" /etc/shells 2>/dev/null; then
-                    print_warning "Changing default shell to Zsh..."
-                    print_warning "You will be prompted for your password."
-                    # Use a subshell with proper TTY handling
-                    (exec < /dev/tty; chsh -s "$ZSH_PATH")
+                if ! grep -q "^$ZSH_PATH$" /etc/shells 2>/dev/null; then
+                    # Add zsh to /etc/shells if we have sudo and it's not there
+                    if sudo -n true 2>/dev/null; then
+                        echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+                        print_success "Added $ZSH_PATH to /etc/shells"
+                    fi
+                fi
+                
+                # Change the shell using sudo to avoid password prompt
+                if sudo -n true 2>/dev/null; then
+                    # Use sudo to change shell for the current user
+                    sudo chsh -s "$ZSH_PATH" "$USER"
                     if [ $? -eq 0 ]; then
                         print_success "Default shell changed to Zsh. This will take effect on your next login."
                     else
                         print_warning "Failed to change shell. You can try manually later with: chsh -s $ZSH_PATH"
                     fi
                 else
-                    # Try to add zsh to /etc/shells if we have sudo
-                    if sudo -n true 2>/dev/null; then
-                        echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
-                        print_warning "Changing default shell to Zsh..."
-                        print_warning "You will be prompted for your password."
-                        (exec < /dev/tty; chsh -s "$ZSH_PATH")
-                        if [ $? -eq 0 ]; then
-                            print_success "Default shell changed to Zsh. This will take effect on your next login."
-                        else
-                            print_warning "Failed to change shell. You can try manually later with: chsh -s $ZSH_PATH"
-                        fi
+                    # No sudo access, try regular chsh (will prompt for password)
+                    print_warning "No sudo access. You'll need to enter your password."
+                    (exec < /dev/tty; chsh -s "$ZSH_PATH")
+                    if [ $? -eq 0 ]; then
+                        print_success "Default shell changed to Zsh. This will take effect on your next login."
                     else
-                        print_warning "Cannot change default shell. Zsh path not in /etc/shells and no sudo access."
-                        print_warning "You can manually change it later with: chsh -s $(which zsh)"
+                        print_warning "Failed to change shell. You can try manually later with: chsh -s $ZSH_PATH"
                     fi
                 fi
             else
