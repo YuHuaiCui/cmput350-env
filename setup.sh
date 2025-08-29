@@ -166,7 +166,7 @@ if command -v zsh &> /dev/null; then
     if [[ "$CURRENT_SHELL" != "zsh" ]]; then
         echo ""
         print_warning "Your current default shell is: $CURRENT_SHELL"
-        read -p "Would you like to set Zsh as your default shell? (y/n): " set_zsh_default
+        read -p "Would you like to set Zsh as your default shell? (y/n): " set_zsh_default < /dev/tty
         if [[ "$set_zsh_default" == "y" ]]; then
             if command -v chsh &> /dev/null; then
                 ZSH_PATH=$(which zsh)
@@ -410,7 +410,8 @@ echo "  2) Documents folder (~/Documents)"
 echo "  3) Desktop (~/Desktop)"
 echo "  4) Custom location"
 echo ""
-read -p "Enter your choice (1-4): " choice
+# Read from terminal, not from pipe
+read -p "Enter your choice (1-4): " choice < /dev/tty
 
 case $choice in
     1)
@@ -425,7 +426,7 @@ case $choice in
         PROJECT_DIR="$HOME/Desktop/cmput350-f25"
         ;;
     4)
-        read -p "Enter the full path where you want to create the folder: " custom_path
+        read -p "Enter the full path where you want to create the folder: " custom_path < /dev/tty
         # Expand tilde if present
         custom_path="${custom_path/#\~/$HOME}"
         PROJECT_DIR="$custom_path/cmput350-f25"
@@ -439,7 +440,7 @@ esac
 # Create the project directory
 if [ -d "$PROJECT_DIR" ]; then
     print_warning "Directory $PROJECT_DIR already exists."
-    read -p "Do you want to use this existing directory? (y/n): " use_existing
+    read -p "Do you want to use this existing directory? (y/n): " use_existing < /dev/tty
     if [[ "$use_existing" != "y" ]]; then
         print_error "Setup cancelled. Please remove or rename the existing directory and run again."
         exit 1
@@ -457,7 +458,7 @@ cd "$PROJECT_DIR"
 # Check if flake.nix already exists
 if [ -f flake.nix ]; then
     print_warning "flake.nix already exists in $PROJECT_DIR"
-    read -p "Do you want to overwrite it? (y/n): " overwrite
+    read -p "Do you want to overwrite it? (y/n): " overwrite < /dev/tty
     if [[ "$overwrite" != "y" ]]; then
         print_success "Keeping existing flake.nix"
     else
@@ -529,7 +530,23 @@ echo ""
 echo -e "${YELLOW}Important next steps:${NC}"
 echo ""
 echo -e "1. ${BLUE}Restart your terminal${NC} or run:"
-echo "   source ~/.zshrc"
+# Show the correct source command based on current shell
+CURRENT_SHELL_NOW=$(basename $SHELL)
+if [[ "$CURRENT_SHELL_NOW" == "zsh" ]]; then
+    echo "   source ~/.zshrc"
+elif [[ "$CURRENT_SHELL_NOW" == "bash" ]]; then
+    echo "   source ~/.bashrc"
+    # Check if user changed default shell to zsh earlier
+    if [[ "${set_zsh_default:-}" == "y" ]]; then
+        echo ""
+        echo -e "   ${YELLOW}Note:${NC} You changed your default shell to zsh."
+        echo -e "   To switch to zsh now, run: ${BLUE}zsh${NC}"
+        echo "   Or restart your terminal for the change to take effect."
+    fi
+else
+    echo "   source ~/.bashrc  (for bash)"
+    echo "   source ~/.zshrc   (for zsh)"
+fi
 echo ""
 echo -e "2. ${BLUE}Navigate to your project:${NC}"
 echo "   cd $PROJECT_DIR"
