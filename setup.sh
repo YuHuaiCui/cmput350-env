@@ -160,6 +160,43 @@ else
     fi
 fi
 
+# Offer to set Zsh as default shell (optional)
+if command -v zsh &> /dev/null; then
+    CURRENT_SHELL=$(basename "$SHELL")
+    if [[ "$CURRENT_SHELL" != "zsh" ]]; then
+        echo ""
+        print_warning "Your current default shell is: $CURRENT_SHELL"
+        read -p "Would you like to set Zsh as your default shell? (y/n): " set_zsh_default
+        if [[ "$set_zsh_default" == "y" ]]; then
+            if command -v chsh &> /dev/null; then
+                ZSH_PATH=$(which zsh)
+                # Check if zsh is in /etc/shells
+                if grep -q "^$ZSH_PATH$" /etc/shells 2>/dev/null; then
+                    chsh -s "$ZSH_PATH"
+                    print_success "Default shell changed to Zsh. This will take effect on your next login."
+                else
+                    # Try to add zsh to /etc/shells if we have sudo
+                    if sudo -n true 2>/dev/null; then
+                        echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
+                        chsh -s "$ZSH_PATH"
+                        print_success "Default shell changed to Zsh. This will take effect on your next login."
+                    else
+                        print_warning "Cannot change default shell. Zsh path not in /etc/shells and no sudo access."
+                        print_warning "You can manually change it later with: chsh -s $(which zsh)"
+                    fi
+                fi
+            else
+                print_warning "chsh command not found. Cannot change default shell automatically."
+                print_warning "You can manually change it later if needed."
+            fi
+        else
+            print_success "Keeping $CURRENT_SHELL as default shell"
+        fi
+    else
+        print_success "Zsh is already your default shell"
+    fi
+fi
+
 # Step 2: Install Nix
 print_step "Step 2: Checking Nix installation..."
 
@@ -487,23 +524,23 @@ echo "========================================"
 echo ""
 print_success "Your CMPUT 350 development environment is ready!"
 echo ""
-echo "Project location: ${BLUE}$PROJECT_DIR${NC}"
+echo -e "Project location: ${BLUE}$PROJECT_DIR${NC}"
 echo ""
-echo "${YELLOW}Important next steps:${NC}"
+echo -e "${YELLOW}Important next steps:${NC}"
 echo ""
-echo "1. ${BLUE}Restart your terminal${NC} or run:"
+echo -e "1. ${BLUE}Restart your terminal${NC} or run:"
 echo "   source ~/.zshrc"
 echo ""
-echo "2. ${BLUE}Navigate to your project:${NC}"
+echo -e "2. ${BLUE}Navigate to your project:${NC}"
 echo "   cd $PROJECT_DIR"
 echo ""
-echo "3. ${BLUE}The environment will activate automatically${NC} when you enter the directory."
+echo -e "3. ${BLUE}The environment will activate automatically${NC} when you enter the directory."
 echo "   You should see the CMPUT 350 welcome message."
 echo ""
-echo "4. ${BLUE}To manually enter the development shell:${NC}"
+echo -e "4. ${BLUE}To manually enter the development shell:${NC}"
 echo "   nix develop"
 echo ""
-echo "${YELLOW}Troubleshooting:${NC}"
+echo -e "${YELLOW}Troubleshooting:${NC}"
 echo ""
 echo "• If direnv doesn't activate automatically:"
 echo "  - Make sure you've restarted your terminal"
@@ -518,4 +555,4 @@ echo "• For WSL users with graphics issues:"
 echo "  - Make sure you have an X server running (like VcXsrv or WSLg)"
 echo "  - Try: export DISPLAY=:0"
 echo ""
-echo "${GREEN}Happy coding!${NC}"
+echo -e "${GREEN}Happy coding!${NC}"
