@@ -172,14 +172,27 @@ if command -v zsh &> /dev/null; then
                 ZSH_PATH=$(which zsh)
                 # Check if zsh is in /etc/shells
                 if grep -q "^$ZSH_PATH$" /etc/shells 2>/dev/null; then
-                    chsh -s "$ZSH_PATH"
-                    print_success "Default shell changed to Zsh. This will take effect on your next login."
+                    print_warning "Changing default shell to Zsh..."
+                    print_warning "You will be prompted for your password."
+                    # Use a subshell with proper TTY handling
+                    (exec < /dev/tty; chsh -s "$ZSH_PATH")
+                    if [ $? -eq 0 ]; then
+                        print_success "Default shell changed to Zsh. This will take effect on your next login."
+                    else
+                        print_warning "Failed to change shell. You can try manually later with: chsh -s $ZSH_PATH"
+                    fi
                 else
                     # Try to add zsh to /etc/shells if we have sudo
                     if sudo -n true 2>/dev/null; then
                         echo "$ZSH_PATH" | sudo tee -a /etc/shells > /dev/null
-                        chsh -s "$ZSH_PATH"
-                        print_success "Default shell changed to Zsh. This will take effect on your next login."
+                        print_warning "Changing default shell to Zsh..."
+                        print_warning "You will be prompted for your password."
+                        (exec < /dev/tty; chsh -s "$ZSH_PATH")
+                        if [ $? -eq 0 ]; then
+                            print_success "Default shell changed to Zsh. This will take effect on your next login."
+                        else
+                            print_warning "Failed to change shell. You can try manually later with: chsh -s $ZSH_PATH"
+                        fi
                     else
                         print_warning "Cannot change default shell. Zsh path not in /etc/shells and no sudo access."
                         print_warning "You can manually change it later with: chsh -s $(which zsh)"
